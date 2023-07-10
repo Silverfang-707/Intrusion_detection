@@ -1,21 +1,23 @@
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.ensemble import IsolationForest
 
-data = pd.read_csv('data.csv')
+# Load the data from the CSV file
+data = pd.read_csv('output.csv', names=['timestamp', 'ip_address', 'load'])
+data['timestamp'] = pd.to_datetime(data['timestamp'])
 
-X=data.drop('label',axis=1)
-y=data['label']
+# Group the data by timestamp and calculate the total load for each timestamp
+data = data.groupby('timestamp')['load'].sum().reset_index()
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+# Extract the load values as a numpy array
+X = data['load'].values.reshape(-1, 1)
 
-model = RandomForestClassifier()
-model.fit(X_train, y_train)
+# Train an Isolation Forest model to detect outliers
+model = IsolationForest(contamination=0.01)
+model.fit(X)
 
-ip_address = input('Enter an IP address: ')
-prediction = model.predict([ip_address])
+# Use the model to predict outliers
+data['outlier'] = model.predict(X)
 
-if prediction[0] == 1:
-    print('The IP address is familiar.')
-else:
-    print('The IP address is suspicious.')
+# Print the timestamps where abnormal load was detected
+outliers = data[data['outlier'] == -1]
+print(outliers['timestamp'])
