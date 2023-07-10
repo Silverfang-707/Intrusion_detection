@@ -3,7 +3,7 @@ import csv
 from datetime import datetime
 
 def get_ip_addresses_and_load():
-    stream = os.popen('netstat -ntu')
+    stream = os.popen('netstat')
     output = stream.read()
     lines = output.split('\n')
     ip_addresses = {}
