@@ -20,8 +20,8 @@ def append_to_csv(data, filename='output.csv'):
     with open(filename, 'a') as f:
         writer = csv.writer(f)
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        for ip_address, load in data.items():
-            writer.writerow([timestamp, ip_address, load])
+        total_load = sum(data.values())
+        writer.writerow([timestamp, total_load])
 
 data = get_ip_addresses_and_load()
 append_to_csv(data)
