@@ -1,27 +1,23 @@
-import os
 import csv
-from datetime import datetime
+import psutil
 
-def get_ip_addresses_and_load():
-    stream = os.popen('netstat')
-    output = stream.read()
-    lines = output.split('\n')
-    ip_addresses = {}
-    for line in lines:
-        if 'ESTABLISHED' in line:
-            columns = line.split()
-            ip_address = columns[4].split(':')[0]
-            if ip_address not in ip_addresses:
-                ip_addresses[ip_address] = 0
-            ip_addresses[ip_address] += 1
-    return ip_addresses
+# Get the list of all network connections
+connections = psutil.net_connections()
 
-def append_to_csv(data, filename='output.csv'):
-    with open(filename, 'a') as f:
-        writer = csv.writer(f)
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        total_load = sum(data.values())
-        writer.writerow([timestamp, total_load])
+# Create a list to store the data
+data = []
 
-data = get_ip_addresses_and_load()
-append_to_csv(data)
+# Iterate over the connections
+for conn in connections:
+    # Get the IP address and load of the connected device
+    ip_address = conn.laddr.ip
+    load = psutil.cpu_percent()
+    
+    # Append the data to the list
+    data.append([ip_address, load])
+
+# Write the data to a CSV file
+with open('output.csv', 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow(['IP Address', 'Load'])
+    writer.writerows(data)

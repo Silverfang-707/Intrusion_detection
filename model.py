@@ -1,23 +1,36 @@
-import pandas as pd
+import csv
+import numpy as np
 from sklearn.ensemble import IsolationForest
 
 # Load the data from the CSV file
-data = pd.read_csv('output.csv', names=['timestamp', 'ip_address', 'load'])
-data['timestamp'] = pd.to_datetime(data['timestamp'])
+with open('output.csv', 'r') as f:
+    reader = csv.reader(f)
+    next(reader)  # Skip the header row
+    data = list(reader)
 
-# Group the data by timestamp and calculate the total load for each timestamp
-data = data.groupby('timestamp')['load'].sum().reset_index()
+# Convert the data to a NumPy array
+data = np.array(data)
 
-# Extract the load values as a numpy array
-X = data['load'].values.reshape(-1, 1)
+# Split the data into features and labels
+X = data[:, 1].astype(float).reshape(-1, 1)
+y = data[:, 0]
 
-# Train an Isolation Forest model to detect outliers
-model = IsolationForest(contamination=0.01)
+# Create an Isolation Forest model
+model = IsolationForest()
+
+# Fit the model on the data
 model.fit(X)
 
-# Use the model to predict outliers
-data['outlier'] = model.predict(X)
+# Make predictions on the data
+predictions = model.predict(X)
 
-# Print the timestamps where abnormal load was detected
-outliers = data[data['outlier'] == -1]
-print(outliers['timestamp'])
+# Iterate over the predictions
+for i, prediction in enumerate(predictions):
+    # Check if the prediction is -1 (outlier)
+    if prediction == -1:
+        # Get the IP address and load of the outlier
+        ip_address = y[i]
+        load = X[i][0]
+        
+        # Print the details of the outlier
+        print(f'Abnormal load detected: IP Address = {ip_address}, Load = {load}')
