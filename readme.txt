@@ -13,3 +13,8 @@ Finally an infinite while loop is deployed to repeat the functions over and over
 Improvements that can be done:
 i)The final output can be made to be deleted (after being backed up) from the main location so that the inaccurate results that have been produced during the start of the execution does not affect the more accurate data that will be produced afterwards.
 ii)More types of data regarding the factor that distinguishes an abnormal network can be added to improve the model's accuracy.
+iii)A function to interrupt the program can be added so that the user does not have to depend on keyboard interrupt to abruptly stop the program.
+
+
+Author:
+Silverfang
