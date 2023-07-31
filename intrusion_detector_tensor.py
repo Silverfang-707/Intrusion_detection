@@ -49,7 +49,37 @@ def generate_csv(file_name='output.csv'):
     f.close()
 
 def run_ml_model(input_file='output.csv', output_file='abnormal_loads.csv', threshold=0.5):
-    # Load the data from the CSV file
+    # Check if the model already exists
+    if os.path.exists('model.h5'):
+        # Load the model from disk
+        model = tf.keras.models.load_model('model.h5')
+    else:
+        # Load the data from the CSV file
+        with open(input_file, 'r') as f:
+            reader = csv.reader(f)
+            next(reader)  # Skip the header row
+            data = list(reader)
+
+        # Convert the data to a NumPy array
+        data = np.array(data)
+
+        # Split the data into features and labels
+        X = data[:, 1:].astype(float)
+        y = data[:, 0]
+
+        # Create a TensorFlow Sequential model
+        model = tf.keras.Sequential([
+            tf.keras.layers.Dense(10, activation='relu'),
+            tf.keras.layers.Dense(1, activation='sigmoid')
+        ])
+
+        # Compile the model with binary crossentropy loss and Adam optimizer
+        model.compile(loss='binary_crossentropy', optimizer='adam')
+
+        # Fit the model on the data (assuming normal loads are labeled as 0 and abnormal loads are labeled as 1)
+        model.fit(X, np.zeros(X.shape[0]))
+
+    # Fit the model on the new data (assuming normal loads are labeled as 0 and abnormal loads are labeled as 1)
     with open(input_file, 'r') as f:
         reader = csv.reader(f)
         next(reader)  # Skip the header row
@@ -62,60 +92,38 @@ def run_ml_model(input_file='output.csv', output_file='abnormal_loads.csv', thre
     X = data[:, 1:].astype(float)
     y = data[:, 0]
 
-    # Create a TensorFlow Sequential model
-    model = tf.keras.Sequential([
-        tf.keras.layers.Dense(10, activation='relu'),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
-
-    # Compile the model with binary crossentropy loss and Adam optimizer
-    model.compile(loss='binary_crossentropy', optimizer='adam')
-
-    # Fit the model on the data (assuming normal loads are labeled as 0 and abnormal loads are labeled as 1)
+    # Update the pre-trained model with new data
     model.fit(X, np.zeros(X.shape[0]))
 
-    # Make predictions on the data (predict returns the probability of each sample being an abnormal load)
+    # Save the updated model to disk
+    model.save('model.h5')
+
+    # Make predictions on the new data (predict returns the probability of each sample being an abnormal load)
     predictions = model.predict(X)[:, 0]
 
-    # Check if the output file exists
-    if os.path.exists(output_file):
-        # Open the file in append mode
-        f = open(output_file, 'a', newline='')
+    # Write the predictions to a CSV file
+    with open(output_file, 'w', newline='') as f:
         writer = csv.writer(f)
-    else:
-        # Create a new file and write the header row
-        f = open(output_file, 'w', newline='')
-        writer = csv.writer(f)
-        writer.writerow(['IP Address', 'Load', 'Bytes Sent', 'Bytes Received', 'Packets Sent', 'Packets Received', 'Used Memory', 'Used Disk'])
+        writer.writerow(['label', 'prediction'])
+        for i in range(len(predictions)):
+            writer.writerow([y[i], predictions[i]])
 
-    # Iterate over the predictions
-    for i, prediction in enumerate(predictions):
-        # Check if the prediction is above the threshold (abnormal load)
-        if prediction > threshold:
-            # Get the details of the abnormal load
-            ip_address, load, bytes_sent, bytes_recv, packets_sent, packets_recv, used_memory, used_disk = data[i]
-            
-            # Write the details of the abnormal load to the file
-            writer.writerow([ip_address, load, bytes_sent, bytes_recv, packets_sent, packets_recv, used_memory, used_disk])
-
-    f.close()
-
-def summarize_abnormal_loads():
-    # Load the data from the abnormal_loads.csv file
-    with open('abnormal_loads.csv', 'r') as f:
+def summarize_abnormal_loads(input_file='abnormal_loads.csv', output_file='abnormal_loads_summary.csv'):
+    # Load the data from the CSV file
+    with open(input_file, 'r') as f:
         reader = csv.reader(f)
         next(reader)  # Skip the header row
-        ip_addresses = [row[0] for row in reader]
+        data = list(reader)
 
-    # Count the occurrences of each IP address
-    counts = Counter(ip_addresses)
+    # Count the number of times each IP address is labeled abnormal
+    counts = Counter(row[0] for row in data if float(row[1]) > 0.5)
 
-    # Open the abnormal_loads_summary.txt file in write mode
-    with open('abnormal_loads_summary.txt', 'w') as f:
-        # Iterate over the counts
+    # Write the results to a CSV file
+    with open(output_file, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['IP Address', 'Count'])
         for ip_address, count in counts.items():
-            # Write the IP address and count to the file
-            f.write(f'{ip_address}: {count}\n')
+            writer.writerow([ip_address, count])
 
 while True:
     generate_csv()
